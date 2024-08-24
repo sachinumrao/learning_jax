@@ -31,8 +31,8 @@ DEBUG = int(os.environ.get("DEBUG", "0"))
 CONFIG = {
     "batch_size": 32,
     "num_epochs": 10,
-    "learning_rate": 1e-4,
-    "momentum": 0.9,
+    "learning_rate": 1e-3,
+    "momentum": 0.95,
     "nesterov": True,
     "log_steps": 10,
 }
@@ -128,7 +128,7 @@ def update_model(state, grads):
     """
     apply batch gradients to the model params contained in state and return updated state
     """
-    return state.apply(grads=grads)
+    return state.apply_gradients(grads=grads)
 
 @jax.jit
 def train_step(state, imgs, labels):
@@ -161,12 +161,15 @@ def train_model_epoch(state, train_dataloader, config, epoch):
         train_loss.append(loss)
         train_acc.append(acc)
 
+        # make parameter updates
+        state = update_model(state, grads)
+
         # log step info
         if (idx + 1) % config["log_steps"] == 0:
             wandb.log(
                 {
                     "epoch": epoch + 1,
-                    "steps": (idx + 1),
+                    "steps": (idx + 1) + epoch * len(train_dataloader),
                     "train_loss": loss,
                     "train_acc": acc,
                 }
